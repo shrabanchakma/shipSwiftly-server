@@ -47,17 +47,16 @@ async function run() {
     });
     app.get("/parcels", async (req, res) => {
       const email = req.query.email;
-      console.log("email is", email);
       const query = { email: email };
       const result = await parcelCollection.find(query).toArray();
       res.send(result);
     });
-    app.get("/wow", async (req, res) => {
-      // const id = req.params.id;
+    app.get(`/parcels/updateParcel/:id`, async (req, res) => {
+      const id = req.params.id;
       console.log("hitting inside");
-      // const query = { _id: new ObjectId(id) };
-      // const result = await parcelCollection.findOne(query);
-      // res.send(result);
+      const query = { _id: new ObjectId(id) };
+      const result = await parcelCollection.findOne(query);
+      res.send(result);
     });
 
     await client.db("admin").command({ ping: 1 });
