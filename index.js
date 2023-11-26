@@ -27,10 +27,19 @@ async function run() {
     // Send a ping to confirm a successful connection
 
     const userCollection = client.db("shipSwiftlyDB").collection("users");
+    const parcelCollection = client.db("shipSwiftlyDB").collection("parcels");
 
+    // users api
     app.post("/users", async (req, res) => {
       const newUser = req.body;
       const result = await userCollection.insertOne(newUser);
+      res.send(result);
+    });
+
+    // parcels api
+    app.post("/parcels", async (req, res) => {
+      const newParcel = req.body;
+      const result = await parcelCollection.insertOne(newParcel);
       res.send(result);
     });
 
