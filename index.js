@@ -42,6 +42,12 @@ async function run() {
       const result = await parcelCollection.insertOne(newParcel);
       res.send(result);
     });
+    app.get("/parcels/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await parcelCollection.find(query).toArray();
+      res.send(result);
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log(
