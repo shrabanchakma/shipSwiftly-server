@@ -45,6 +45,30 @@ async function run() {
       const result = await parcelCollection.insertOne(newParcel);
       res.send(result);
     });
+    app.put("/parcels", async (req, res) => {
+      const parcel = req.body;
+      const filter = { _id: new ObjectId(parcel.id) };
+      const updateDoc = {
+        $set: {
+          email: parcel.email,
+          name: parcel.name,
+          phoneNumber: parcel.phoneNumber,
+          parcelType: parcel.parcelType,
+          receiversName: parcel.receiversName,
+          receiversPhoneNumber: parcel.receiversPhoneNumber,
+          parcelWeight: parcel.parcelWeight,
+          deliveryAddress: parcel.deliveryAddress,
+          latitude: parcel.latitude,
+          longitude: parcel.longitude,
+          deliveryDate: parcel.deliveryDate,
+          price: parcel.price,
+          status: "pending",
+        },
+      };
+
+      const result = await parcelCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
     app.get("/parcels", async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
@@ -53,7 +77,6 @@ async function run() {
     });
     app.get(`/parcels/updateParcel/:id`, async (req, res) => {
       const id = req.params.id;
-      console.log("hitting inside");
       const query = { _id: new ObjectId(id) };
       const result = await parcelCollection.findOne(query);
       res.send(result);
