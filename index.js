@@ -30,6 +30,14 @@ async function run() {
     const parcelCollection = client.db("shipSwiftlyDB").collection("parcels");
 
     // users api
+
+    app.get("/users/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await userCollection.findOne(query);
+      res.send(result);
+    });
+
     app.post("/users", async (req, res) => {
       const user = req.body;
       const query = { email: user.email };
@@ -39,7 +47,33 @@ async function run() {
       res.send(result);
     });
 
+    app.patch("/users/:email", async (req, res) => {
+      const email = req.params.email;
+      const updatedImage = req.body.newImage;
+      const filter = { email: email };
+      const updatedDoc = {
+        $set: {
+          image: updatedImage,
+        },
+      };
+      const result = await userCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+
     // parcels api
+    app.get("/parcels", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const result = await parcelCollection.find(query).toArray();
+      res.send(result);
+    });
+    app.get(`/parcels/updateParcel/:id`, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await parcelCollection.findOne(query);
+      res.send(result);
+    });
+
     app.post("/parcels", async (req, res) => {
       const newParcel = req.body;
       const result = await parcelCollection.insertOne(newParcel);
@@ -69,16 +103,16 @@ async function run() {
       const result = await parcelCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
-    app.get("/parcels", async (req, res) => {
-      const email = req.query.email;
-      const query = { email: email };
-      const result = await parcelCollection.find(query).toArray();
-      res.send(result);
-    });
-    app.get(`/parcels/updateParcel/:id`, async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await parcelCollection.findOne(query);
+
+    app.patch("/parcels", async (req, res) => {
+      const updatedStatus = req.body.status;
+      const filter = { _id: new ObjectId(req.body.id) };
+      const updateDoc = {
+        $set: {
+          status: updatedStatus,
+        },
+      };
+      const result = await parcelCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
 
