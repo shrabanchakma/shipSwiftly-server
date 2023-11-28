@@ -43,7 +43,7 @@ async function run() {
       const query = { email: user.email };
       const isUserExist = await userCollection.findOne(query);
       if (isUserExist) return res.send({ status: "user exists" });
-      const result = await userCollection.insertOne(newUser);
+      const result = await userCollection.insertOne(user);
       res.send(result);
     });
 
@@ -60,10 +60,23 @@ async function run() {
       res.send(result);
     });
 
+    // delivery Mens api
+
+    app.get("/deliveryMens", async (req, res) => {
+      const query = { type: "deliverymen" };
+      const result = await userCollection.find(query).toArray();
+      res.send(result);
+    });
+
     // parcels api
     app.get("/parcels", async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
+      const result = await parcelCollection.find(query).toArray();
+      res.send(result);
+    });
+    app.get("/parcels/allParcels", async (req, res) => {
+      const query = { status: "pending" };
       const result = await parcelCollection.find(query).toArray();
       res.send(result);
     });
