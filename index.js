@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
+const jwt = require("jsonwebtoken");
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -29,14 +30,42 @@ async function run() {
     const userCollection = client.db("shipSwiftlyDB").collection("users");
     const parcelCollection = client.db("shipSwiftlyDB").collection("parcels");
 
+    // middlewares
+    const verifyToken = (req, res, next) => {
+      if (!req.headers.authorization) {
+        return res.status(401).send({ status: "unauthorized access" });
+      }
+      const token = req.headers.authorization.split(" ")[1];
+      jwt.verify(
+        token,
+        process.env.ACCESS_TOKEN_SECRET,
+        function (err, decoded) {
+          if (err) {
+            return res.status(401).send({ message: "unauthorized access" });
+          }
+          req.decoded = decoded;
+          next();
+        }
+      );
+    };
     // users api
-
-    app.get("/users/allUsers", async (req, res) => {
+    app.post("/jwt", async (req, res) => {
+      const email = req.body.email;
+      const token = jwt.sign(
+        {
+          email,
+        },
+        process.env.ACCESS_TOKEN_SECRET,
+        { expiresIn: "3h" }
+      );
+      res.send({ token });
+    });
+    app.get("/users/allUsers", verifyToken, async (req, res) => {
       const query = { type: "user" };
       const result = await userCollection.find(query).toArray();
       res.send(result);
     });
-    app.get("/users/:email", async (req, res) => {
+    app.get("/users/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
       const result = await userCollection.findOne(query);
@@ -52,7 +81,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/users/:email", async (req, res) => {
+    app.patch("/users/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const updatedImage = req.body.newImage;
       const filter = { email: email };
@@ -64,52 +93,64 @@ async function run() {
       const result = await userCollection.updateOne(filter, updatedDoc);
       res.send(result);
     });
+
     // user type update api
-    app.patch("/userType/makeDeliveryMen/:id", async (req, res) => {
+    app.patch(
+      "/userType/makeDeliveryMen/:id",
+      verifyToken,
+      async (req, res) => {
+        const userId = req.params.id;
+        const query = { _id: new ObjectId(userId) };
+        const updatedDoc = { $set: { type: "deliverymen" } };
+        const result = await userCollection.updateOne(query, updatedDoc);
+        res.send(result);
+      }
+    );
+    app.patch("/userType/makeAdmin/:id", verifyToken, async (req, res) => {
       const userId = req.params.id;
       const query = { _id: new ObjectId(userId) };
-      const updatedDoc = { $set: { type: "deliverymen" } };
+      const updatedDoc = { $set: { type: "admin" } };
       const result = await userCollection.updateOne(query, updatedDoc);
       res.send(result);
     });
-    // delivery Mens api
 
-    app.get("/deliveryMens", async (req, res) => {
+    // delivery Mens api
+    app.get("/deliveryMens", verifyToken, async (req, res) => {
       const query = { type: "deliverymen" };
       const result = await userCollection.find(query).toArray();
       res.send(result);
     });
 
     // parcels api
-    app.get("/parcels", async (req, res) => {
+    app.get("/parcels", verifyToken, async (req, res) => {
       console.log("entered parcels", req.query.email);
       const email = req.query.email;
       const query = { email: email };
       const result = await parcelCollection.find(query).toArray();
       res.send(result);
     });
-    app.get("/parcels/allParcels", async (req, res) => {
+    app.get("/parcels/allParcels", verifyToken, async (req, res) => {
       const result = await parcelCollection.find().toArray();
       res.send(result);
     });
-    app.get("/parcels/users/allParcels", async (req, res) => {
+    app.get("/parcels/users/allParcels", verifyToken, async (req, res) => {
       const query = { status: { $ne: "cancel" } };
       const result = await parcelCollection.find(query).toArray();
       res.send(result);
     });
-    app.get(`/parcels/updateParcel/:id`, async (req, res) => {
+    app.get(`/parcels/updateParcel/:id`, verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await parcelCollection.findOne(query);
       res.send(result);
     });
 
-    app.post("/parcels", async (req, res) => {
+    app.post("/parcels", verifyToken, async (req, res) => {
       const newParcel = req.body;
       const result = await parcelCollection.insertOne(newParcel);
       res.send(result);
     });
-    app.put("/parcels", async (req, res) => {
+    app.put("/parcels", verifyToken, async (req, res) => {
       const parcel = req.body;
       const filter = { _id: new ObjectId(parcel.id) };
       const updateDoc = {
@@ -134,7 +175,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/parcels", async (req, res) => {
+    app.patch("/parcels", verifyToken, async (req, res) => {
       const updatedStatus = req.body.status;
       const filter = { _id: new ObjectId(req.body.id) };
       const updateDoc = {
@@ -145,7 +186,7 @@ async function run() {
       const result = await parcelCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
-    app.patch("/parcels/setDeliveryMen", async (req, res) => {
+    app.patch("/parcels/setDeliveryMen", verifyToken, async (req, res) => {
       const updatedData = req.body;
       const parcelId = updatedData.parcelId;
       const filter = { _id: new ObjectId(parcelId) };
