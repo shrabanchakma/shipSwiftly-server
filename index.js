@@ -31,6 +31,7 @@ async function run() {
     const parcelCollection = client.db("shipSwiftlyDB").collection("parcels");
 
     // middlewares
+
     const verifyToken = (req, res, next) => {
       if (!req.headers.authorization) {
         return res.status(401).send({ status: "unauthorized access" });
@@ -48,6 +49,18 @@ async function run() {
         }
       );
     };
+
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const isAdmin = user?.type === "admin";
+      if (!isAdmin) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
+
     // users api
     app.post("/jwt", async (req, res) => {
       const email = req.body.email;
@@ -60,7 +73,7 @@ async function run() {
       );
       res.send({ token });
     });
-    app.get("/users/allUsers", verifyToken, async (req, res) => {
+    app.get("/users/allUsers", verifyToken, verifyAdmin, async (req, res) => {
       const query = { type: "user" };
       const result = await userCollection.find(query).toArray();
       res.send(result);
@@ -98,6 +111,7 @@ async function run() {
     app.patch(
       "/userType/makeDeliveryMen/:id",
       verifyToken,
+      verifyAdmin,
       async (req, res) => {
         const userId = req.params.id;
         const query = { _id: new ObjectId(userId) };
@@ -106,16 +120,21 @@ async function run() {
         res.send(result);
       }
     );
-    app.patch("/userType/makeAdmin/:id", verifyToken, async (req, res) => {
-      const userId = req.params.id;
-      const query = { _id: new ObjectId(userId) };
-      const updatedDoc = { $set: { type: "admin" } };
-      const result = await userCollection.updateOne(query, updatedDoc);
-      res.send(result);
-    });
+    app.patch(
+      "/userType/makeAdmin/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const userId = req.params.id;
+        const query = { _id: new ObjectId(userId) };
+        const updatedDoc = { $set: { type: "admin" } };
+        const result = await userCollection.updateOne(query, updatedDoc);
+        res.send(result);
+      }
+    );
 
     // delivery Mens api
-    app.get("/deliveryMens", verifyToken, async (req, res) => {
+    app.get("/deliveryMens", verifyToken, verifyAdmin, async (req, res) => {
       const query = { type: "deliverymen" };
       const result = await userCollection.find(query).toArray();
       res.send(result);
@@ -123,16 +142,20 @@ async function run() {
 
     // parcels api
     app.get("/parcels", verifyToken, async (req, res) => {
-      console.log("entered parcels", req.query.email);
       const email = req.query.email;
       const query = { email: email };
       const result = await parcelCollection.find(query).toArray();
       res.send(result);
     });
-    app.get("/parcels/allParcels", verifyToken, async (req, res) => {
-      const result = await parcelCollection.find().toArray();
-      res.send(result);
-    });
+    app.get(
+      "/parcels/allParcels",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const result = await parcelCollection.find().toArray();
+        res.send(result);
+      }
+    );
     app.get("/parcels/users/allParcels", verifyToken, async (req, res) => {
       const query = { status: { $ne: "cancel" } };
       const result = await parcelCollection.find(query).toArray();
@@ -186,20 +209,25 @@ async function run() {
       const result = await parcelCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
-    app.patch("/parcels/setDeliveryMen", verifyToken, async (req, res) => {
-      const updatedData = req.body;
-      const parcelId = updatedData.parcelId;
-      const filter = { _id: new ObjectId(parcelId) };
-      const updateDoc = {
-        $set: {
-          status: updatedData.updatedStatus,
-          deliveryMenId: updatedData.deliveryMenId,
-          approximateDeliveryDate: updatedData.approximateDeliveryDate,
-        },
-      };
-      const result = await parcelCollection.updateOne(filter, updateDoc);
-      res.send(result);
-    });
+    app.patch(
+      "/parcels/setDeliveryMen",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const updatedData = req.body;
+        const parcelId = updatedData.parcelId;
+        const filter = { _id: new ObjectId(parcelId) };
+        const updateDoc = {
+          $set: {
+            status: updatedData.updatedStatus,
+            deliveryMenId: updatedData.deliveryMenId,
+            approximateDeliveryDate: updatedData.approximateDeliveryDate,
+          },
+        };
+        const result = await parcelCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      }
+    );
 
     await client.db("admin").command({ ping: 1 });
     console.log(
