@@ -6,7 +6,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // middleware
-app.use(cors());
+app.use(cors({}));
 app.use(express.json());
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
@@ -147,15 +147,17 @@ async function run() {
       const result = await parcelCollection.find(query).toArray();
       res.send(result);
     });
-    app.get(
-      "/parcels/allParcels",
-      verifyToken,
-      verifyAdmin,
-      async (req, res) => {
-        const result = await parcelCollection.find().toArray();
-        res.send(result);
-      }
-    );
+    app.get("/parcels/allParcels", async (req, res) => {
+      const result = await parcelCollection.find().toArray();
+      res.send(result);
+    });
+    app.get("/parcels/deliveryList/:id", verifyToken, async (req, res) => {
+      const deliveryMenId = req.params.id;
+      console.log(deliveryMenId);
+      // const query = { deliveryMenId: req.params.id };
+      // const result = await parcelCollection.find(query).toArray();
+      // return res.send;
+    });
     app.get("/parcels/users/allParcels", verifyToken, async (req, res) => {
       const query = { status: { $ne: "cancel" } };
       const result = await parcelCollection.find(query).toArray();
@@ -168,7 +170,7 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/parcels", verifyToken, async (req, res) => {
+    app.post("/parcels", async (req, res) => {
       const newParcel = req.body;
       const result = await parcelCollection.insertOne(newParcel);
       res.send(result);
@@ -209,6 +211,18 @@ async function run() {
       const result = await parcelCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
+    app.patch("/parcels/parcelDelivery", verifyToken, async (req, res) => {
+      const updatedStatus = req.body.status;
+      const filter = { _id: new ObjectId(req.body.id) };
+      const updateDoc = {
+        $set: {
+          status: updatedStatus,
+        },
+      };
+      const result = await parcelCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
     app.patch(
       "/parcels/setDeliveryMen",
       verifyToken,
@@ -228,6 +242,15 @@ async function run() {
         res.send(result);
       }
     );
+
+    // delivery list api
+    app.get("/deliveryList/:id", verifyToken, async (req, res) => {
+      let userId = req.params.id;
+      console.log(userId);
+      const query = { deliveryMenId: userId };
+      const result = await parcelCollection.find(query).toArray();
+      res.send(result);
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log(
