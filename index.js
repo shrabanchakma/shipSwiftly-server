@@ -29,6 +29,7 @@ async function run() {
 
     const userCollection = client.db("shipSwiftlyDB").collection("users");
     const parcelCollection = client.db("shipSwiftlyDB").collection("parcels");
+    const reviewCollection = client.db("shipSwiftlyDB").collection("reviews");
 
     // middlewares
 
@@ -73,7 +74,7 @@ async function run() {
       );
       res.send({ token });
     });
-    app.get("/users/allUsers", verifyToken, verifyAdmin, async (req, res) => {
+    app.get("/users/allUsers", async (req, res) => {
       const query = { type: "user" };
       const result = await userCollection.find(query).toArray();
       res.send(result);
@@ -147,6 +148,7 @@ async function run() {
       const result = await parcelCollection.find(query).toArray();
       res.send(result);
     });
+
     app.get("/parcels/allParcels", async (req, res) => {
       const result = await parcelCollection.find().toArray();
       res.send(result);
@@ -173,6 +175,11 @@ async function run() {
     app.post("/parcels", async (req, res) => {
       const newParcel = req.body;
       const result = await parcelCollection.insertOne(newParcel);
+      res.send(result);
+    });
+    app.post("/parcels/parcelReview", async (req, res) => {
+      const userReview = req.body;
+      const result = await reviewCollection.insertOne(userReview);
       res.send(result);
     });
     app.put("/parcels", verifyToken, async (req, res) => {
@@ -249,6 +256,12 @@ async function run() {
       console.log(userId);
       const query = { deliveryMenId: userId };
       const result = await parcelCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    // review api
+    app.get("/reviews", async (req, res) => {
+      const result = await reviewCollection.find().toArray();
       res.send(result);
     });
 
